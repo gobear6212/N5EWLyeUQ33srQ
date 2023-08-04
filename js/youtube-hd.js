@@ -67,7 +67,7 @@ function youtubeHD(use_default) {
 
     // Setting cookies can allow some operations to perform faster or without a delay (e.g. theater mode)
     // Some people don't like setting cookies, so this is false by default (which is the same as old behavior)
-    const allowCookies = false;
+    const allowCookies = true;
 
     // Tries to set the resolution as early as possible.
     // This might cause issues on youtube polymer layout, so disable if videos fail to load.
@@ -249,11 +249,14 @@ function youtubeHD(use_default) {
                 setResolution(ytPlayer, resolutionList);
 
                 let storedQuality = localStorage.getItem("yt-player-quality");
-                if (!storedQuality || storedQuality.indexOf(targetRes) === -1)
-                {
-                    let tc = Date.now(), te = tc + 2592000000;
-                    localStorage.setItem("yt-player-quality","{\"data\":\"" + targetRes + "\",\"expiration\":" + te + ",\"creation\":" + tc + "}");
-                }
+                let tc = Date.now(), te = tc + 2592000000;
+                localStorage.setItem("yt-player-quality","{\"data\":\"" + targetRes + "\",\"expiration\":" + te + ",\"creation\":" + tc + "}");
+
+                // if (!storedQuality || storedQuality.indexOf(targetRes) === -1)
+                // {
+                //     let tc = Date.now(), te = tc + 2592000000;
+                //     localStorage.setItem("yt-player-quality","{\"data\":\"" + targetRes + "\",\"expiration\":" + te + ",\"creation\":" + tc + "}");
+                // }
             }
         }
     }
