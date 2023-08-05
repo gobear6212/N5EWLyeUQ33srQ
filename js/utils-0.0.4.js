@@ -239,7 +239,8 @@ async function downloadURLs(urls, handler, useXHR=false, ...params) {
         const config = { "method": "GET" };
         try {
             if (useXHR) {
-                let response = await GMxmlHttpRequestAsync(url, config);
+                let response = await GMxmlHttpRequestAsync(url, {...config, ...params[0]});
+                params.splice(0, 1);
                 return handler(response, idx, ...params);
             } else {        
                 let response = await fetch(url, config);
@@ -279,7 +280,6 @@ function GMxmlHttpRequestAsync(url, config) {
         GM.xmlHttpRequest({
             ...config,
             "url": url,
-            "responseType": "arraybuffer",
             "onload": (response) => resolve(response),
             "onerror": (response) => reject(response.status),
             "ontimeout": (response) => reject(response.status),
