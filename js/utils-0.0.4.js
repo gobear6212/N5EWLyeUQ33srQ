@@ -235,12 +235,11 @@ async function createMenu(handler_dict) {
 }
 
 async function downloadURLs(urls, handler, useXHR=false, ...params) {
+    let config = { "method": "GET" };
     async function _downloadURL(url, idx) {
-        const config = { "method": "GET" };
         try {
             if (useXHR) {
-                let response = await GMxmlHttpRequestAsync(url, {...config, ...params[0]});
-                params.splice(0, 1);
+                let response = await GMxmlHttpRequestAsync(url, config);
                 return handler(response, idx, ...params);
             } else {        
                 let response = await fetch(url, config);
@@ -253,6 +252,11 @@ async function downloadURLs(urls, handler, useXHR=false, ...params) {
         } catch(error) {
             throw [url, error];
         }
+    }
+
+    if (useXHR) {
+        config = {...config, ...params[0]}
+        params.splice(0, 1);
     }
 
     const invalidPatterns = [undefined, null, "", "#"];
