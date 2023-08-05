@@ -34,11 +34,9 @@ function insertScript(mode, str, callback=null, doc=document) {
     }
     (doc.head || doc.body || doc.documentElement).appendChild(script);
     if (callback) {
-        if (mode === "text") {
+        script.addEventListener('load', function() {
             callback();
-        } else if (mode === "src") {
-            script.addEventListener('load', function() { callback(); });
-        }
+        });
     }
     return script;
 }
@@ -46,7 +44,15 @@ function insertScript(mode, str, callback=null, doc=document) {
 async function insertScriptAsync(scriptList, doAsync=true, doc=document) {
     function _insertScriptPromise(mode, str) {
         return new Promise((resolve, reject) => {
-            insertScript(mode, str, resolve, doc);
+            var script = doc.createElement("script");
+            script.type = "text/javascript";
+            if (mode === "text") {
+                script.text = str;
+            } else if (mode === "src") {
+                script.src = str;
+            }
+            (doc.head || doc.body || doc.documentElement).appendChild(script);
+            script.addEventListener('load', () => { resolve() });
         });        
     }
 
