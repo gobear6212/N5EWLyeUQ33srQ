@@ -1,26 +1,40 @@
 var customPrefix = "";
 
-function documentReady(callback, doc=document) {
-    if (doc.readyState !== 'loading') {
+function stateEventListener(elem, event, stateChecker, callback) {
+    if (stateChecker(elem)) {
         callback();
     } else {
-        doc.addEventListener('DOMContentLoaded', function _domLoadHandler() {   // i.e. document ready
-            doc.removeEventListener('DOMContentLoaded', _domLoadHandler, false);
+        elem.addEventListener(event, function _someEventHandler() {
+            elem.removeEventListener(event, _someEventHandler, false);
             callback();
         }, false)
     }
 }
 
+function documentReady(callback, doc=document) {
+    const stateChecker = (elem) => elem.readyState !== 'loading';
+    stateEventListener(doc, 'DOMContentLoaded', stateChecker, callback);
+    // if (doc.readyState !== 'loading') {
+    //     callback();
+    // } else {
+    //     doc.addEventListener('DOMContentLoaded', function _domLoadHandler() {   // i.e. document ready
+    //         doc.removeEventListener('DOMContentLoaded', _domLoadHandler, false);
+    //         callback();
+    //     }, false)
+    // }
+}
+
 function documentReadyAsync(doc=document) {
     return new Promise((resolve, reject) => {
-        if (doc.readyState !== 'loading') {
-            resolve();
-        } else {
-            doc.addEventListener('DOMContentLoaded', function _domLoadHandler() {   // i.e. document ready
-                doc.removeEventListener('DOMContentLoaded', _domLoadHandler, false);
-                resolve();
-            }, false)
-        }
+        documentReady(resolve, doc);
+        // if (doc.readyState !== 'loading') {
+        //     resolve();
+        // } else {
+        //     doc.addEventListener('DOMContentLoaded', function _domLoadHandler() {   // i.e. document ready
+        //         doc.removeEventListener('DOMContentLoaded', _domLoadHandler, false);
+        //         resolve();
+        //     }, false)
+        // }
     });
 }
 
