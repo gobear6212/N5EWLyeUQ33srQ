@@ -1,23 +1,23 @@
 var customPrefix = "";
 
-function documentReady(callback) {
-    if (document.readyState !== 'loading') {
+function documentReady(callback, doc=document) {
+    if (doc.readyState !== 'loading') {
         callback();
     } else {
-        document.addEventListener('DOMContentLoaded', function _domLoadHandler() {   // i.e. document ready
-            document.removeEventListener('DOMContentLoaded', _domLoadHandler, false);
+        doc.addEventListener('DOMContentLoaded', function _domLoadHandler() {   // i.e. document ready
+            doc.removeEventListener('DOMContentLoaded', _domLoadHandler, false);
             callback();
         }, false)
     }
 }
 
-function documentReadyAsync() {
+function documentReadyAsync(doc=document) {
     return new Promise((resolve, reject) => {
-        if (document.readyState !== 'loading') {
+        if (doc.readyState !== 'loading') {
             resolve();
         } else {
-            document.addEventListener('DOMContentLoaded', function _domLoadHandler() {   // i.e. document ready
-                document.removeEventListener('DOMContentLoaded', _domLoadHandler, false);
+            doc.addEventListener('DOMContentLoaded', function _domLoadHandler() {   // i.e. document ready
+                doc.removeEventListener('DOMContentLoaded', _domLoadHandler, false);
                 resolve();
             }, false)
         }
@@ -147,7 +147,13 @@ async function createMenu(handler_dict) {
     function _createWrapper() {
         let wrapper = document.createElement("div");
         wrapper.id = `${customPrefix}-menu-wrapper`;
-        wrapper.innerHTML = `<div id="${customPrefix}-menu-box"><div id="${customPrefix}-menu-list"></div><hr /><input id="${customPrefix}-menu-input" type="text"></input></div>`;
+        wrapper.innerHTML = `
+        <div id="${customPrefix}-menu-box">
+            <div id="${customPrefix}-menu-list"></div>
+            <hr />
+            <input id="${customPrefix}-menu-input" type="text"></input>
+        </div>
+        `;
         document.body.appendChild(wrapper);
         
         insertStylesheet("text", `
@@ -197,12 +203,18 @@ async function createMenu(handler_dict) {
 
         if (isMobile) {
             nClicksListener(2, (ev) => {
-                setElemDisplay(wrapper, "toggle");
+                const isHidden = setElemDisplay(wrapper, "toggle");
+                if (isHidden) {
+                    document.getElementById(`${customPrefix}-menu-input`).focus();
+                }
             }, ["A", "INPUT", "BUTTON"], true);
         } else {
             document.addEventListener("keydown", function(ev) {
                 if (ev.keyCode == 48 && ev.ctrlKey) {   // 48 = "0"
-                    setElemDisplay(wrapper, "toggle");
+                    const isHidden = setElemDisplay(wrapper, "toggle");
+                    if (isHidden) {
+                        document.getElementById(`${customPrefix}-menu-input`).focus();
+                    }
                 }
             }, true);
         }
@@ -241,7 +253,7 @@ async function downloadURLs(urls, handler, useXHR=false, ...params) {
             if (useXHR) {
                 let response = await GMxmlHttpRequestAsync(url, config);
                 return handler(response, idx, ...params);
-            } else {        
+            } else {
                 let response = await fetch(url, config);
                 if (response.ok) {
                     return handler(response, idx, ...params);
