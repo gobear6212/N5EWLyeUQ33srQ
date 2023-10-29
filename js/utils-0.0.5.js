@@ -1,5 +1,7 @@
 var customPrefix = "";
 
+const currying = (fn, ...params) => ((...more) => fn(...params, ...more));
+
 function stateEventListener(elem, event, stateChecker, callback) {
     if (stateChecker(elem)) {
         callback();
@@ -205,7 +207,7 @@ async function createMenu(handler_dict) {
                 if (isHidden) {
                     document.getElementById(`${customPrefix}-menu-input`).focus();
                 }
-            }, ["A", "INPUT", "BUTTON"], true);
+            }, ["A", "INPUT", "BUTTON", "IMG"], true);
         } else {
             document.addEventListener("keydown", function(ev) {
                 if (ev.keyCode == 48 && ev.ctrlKey) {   // 48 = "0"
