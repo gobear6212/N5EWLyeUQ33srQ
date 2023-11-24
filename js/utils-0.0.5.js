@@ -1,4 +1,5 @@
 var customPrefix = "";
+var createMenuAdhocHandlerDict = null;
 
 const currying = (fn, ...params) => ((...more) => fn(...params, ...more));
 
@@ -255,8 +256,7 @@ async function createMenu(handlerDict) {
     }
     
     function _addAdhocItems() {
-        if (typeof window.createMenuItemProvider !== "undefined") {
-            const temporaryHandlerDict = window.createMenuItemProvider();
+        if (createMenuAdhocHandlerDict !== null) {
             const origContainer = document.getElementById(`${customPrefix}-menu-list-tmp`);
             if (origContainer) {
                 origContainer.remove();
@@ -264,7 +264,7 @@ async function createMenu(handlerDict) {
 
             const container = document.createElement("div");
             container.id = `${customPrefix}-menu-list-tmp`;
-            _registerItems(temporaryHandlerDict, container);
+            _registerItems(createMenuAdhocHandlerDict, container);
             list.appendChild(container);
         }
     }
