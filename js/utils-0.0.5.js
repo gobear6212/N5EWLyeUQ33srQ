@@ -2,6 +2,11 @@ var customPrefix = "";
 
 const currying = (fn, ...params) => ((...more) => fn(...params, ...more));
 
+async function hashString(string, algorithm="SHA-1") {
+    let bits = await crypto.subtle.digest(algorithm, new TextEncoder().encode(string));
+    return Array.from(new Uint8Array(bits)).join('');
+}
+
 function stateEventListener(elem, event, stateChecker, callback) {
     if (stateChecker(elem)) {
         callback();
@@ -24,8 +29,15 @@ function documentReadyAsync(doc=document) {
     });
 }
 
-function insertScript(mode, str, callback=null, doc=document) {
+async function insertScript(mode, str, callback=null, doc=document) {
+    let hash = await hashString(str)
+    let match = document.getElementById(hash);
+    if (match) {
+        callback();
+        return match;
+    }
     var script = doc.createElement("script");
+    script.id = hash;
     script.type = "text/javascript";
     if (mode === "text") {
         script.text = str;
@@ -143,7 +155,7 @@ function nClicksListener(n, handler, excludedTags, isCapturing) {
     }, isCapturing);
 }
 
-async function createMenu(handler_dict) {
+async function createMenu(handlerDict) {
     function _createWrapper() {
         let wrapper = document.createElement("div");
         wrapper.id = `${customPrefix}-menu-wrapper`;
@@ -189,12 +201,12 @@ async function createMenu(handler_dict) {
                 max-width: 100% !important;
             }
 
-            #${customPrefix}-menu-list > div {
+            #${customPrefix}-menu-list div.${customPrefix}-menu-item {
                 margin: ${isMobile? "5px" : "3px"} 0 !important;
                 cursor: pointer !important;
             }
 
-            #${customPrefix}-menu-list > div:hover {
+            #${customPrefix}-menu-list div.${customPrefix}-menu-item:hover {
                 background-color: #f0f0f0 !important;
             }
         `);
@@ -202,11 +214,11 @@ async function createMenu(handler_dict) {
         setElemDisplay(wrapper, "toggle");
 
         if (isMobile) {
+            // document.addEventListener("dblclick", () => {
+            //     ev.preventDefault();
+            // }, true);
             nClicksListener(2, (ev) => {
                 const isHidden = setElemDisplay(wrapper, "toggle");
-                if (isHidden) {
-                    document.getElementById(`${customPrefix}-menu-input`).focus();
-                }
             }, ["A", "INPUT", "BUTTON", "IMG"], true);
         } else {
             document.addEventListener("keydown", function(ev) {
@@ -218,32 +230,46 @@ async function createMenu(handler_dict) {
                 }
             }, true);
         }
-        return wrapper
+        return wrapper;
+    }
+
+    function _registerItems(handlers, parent) {
+        for (const [key, value] of Object.entries(handlers)) {
+            let item = document.createElement("div");
+            item.className = `${customPrefix}-menu-item`;
+            item.innerHTML = key;
+            item.addEventListener("click", (ev) => {
+                if (typeof value == "function") {
+                    let input = document.getElementById(`${customPrefix}-menu-input`).value;
+                    value(input);
+                } else {
+                    let fn = value[0];
+                    fn(...value.slice(1));
+                }
+                setElemDisplay(wrapper, "toggle");
+            });
+            parent.appendChild(item);
+        };
     }
 
     await documentReadyAsync();
 
-    let wrapper = document.getElementById(`${customPrefix}-menu-wrapper`) || _createWrapper(),
-        list = document.getElementById(`${customPrefix}-menu-list`);
+    const wrapper = document.getElementById(`${customPrefix}-menu-wrapper`) || _createWrapper(),
+          list = document.getElementById(`${customPrefix}-menu-list`);
 
-    let idx = 0;
-    for (const [key, value] of Object.entries(handler_dict)) {
-        let item = document.createElement("div");
-        item.id = `${customPrefix}-menu-item-${idx}`;
-        item.innerHTML = key;
-        item.addEventListener("click", (ev) => {
-            if (typeof value == "function") {
-                let input = document.getElementById(`${customPrefix}-menu-input`).value;
-                value(input);
-            } else {
-                let fn = value[0];
-                fn(...value.slice(1));
-            }
-            setElemDisplay(wrapper, "toggle");
-        });
-        list.appendChild(item);
-        idx += 1;
-    };
+    _registerItems(handlerDict, list);
+    if (typeof window.createMenuItemProvider !== "undefined") {
+        const temporaryHandlerDict = window.createMenuItemProvider();
+        const origContainer = document.getElementById(`${customPrefix}-menu-list-tmp`);
+        if (origContainer) {
+            origContainer.remove();
+        }
+
+        const container = document.createElement("div");
+        container.id = `${customPrefix}-menu-list-tmp`;
+        _registerItems(temporaryHandlerDict, container);
+        list.appendChild(container);
+    }
 }
 
 async function downloadURLs(urls, handler, useXHR=false, ...params) {
