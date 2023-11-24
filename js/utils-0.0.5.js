@@ -218,11 +218,13 @@ async function createMenu(handlerDict) {
             //     ev.preventDefault();
             // }, true);
             nClicksListener(2, (ev) => {
+                _addAdhocItems();
                 const isHidden = setElemDisplay(wrapper, "toggle");
             }, ["A", "INPUT", "BUTTON", "IMG"], true);
         } else {
             document.addEventListener("keydown", function(ev) {
                 if (ev.keyCode == 48 && ev.ctrlKey) {   // 48 = "0"
+                    _addAdhocItems();
                     const isHidden = setElemDisplay(wrapper, "toggle");
                     if (isHidden) {
                         document.getElementById(`${customPrefix}-menu-input`).focus();
@@ -251,6 +253,21 @@ async function createMenu(handlerDict) {
             parent.appendChild(item);
         };
     }
+    
+    function _addAdhocItems() {
+        if (typeof window.createMenuItemProvider !== "undefined") {
+            const temporaryHandlerDict = window.createMenuItemProvider();
+            const origContainer = document.getElementById(`${customPrefix}-menu-list-tmp`);
+            if (origContainer) {
+                origContainer.remove();
+            }
+
+            const container = document.createElement("div");
+            container.id = `${customPrefix}-menu-list-tmp`;
+            _registerItems(temporaryHandlerDict, container);
+            list.appendChild(container);
+        }
+    }
 
     await documentReadyAsync();
 
@@ -258,18 +275,6 @@ async function createMenu(handlerDict) {
           list = document.getElementById(`${customPrefix}-menu-list`);
 
     _registerItems(handlerDict, list);
-    if (typeof window.createMenuItemProvider !== "undefined") {
-        const temporaryHandlerDict = window.createMenuItemProvider();
-        const origContainer = document.getElementById(`${customPrefix}-menu-list-tmp`);
-        if (origContainer) {
-            origContainer.remove();
-        }
-
-        const container = document.createElement("div");
-        container.id = `${customPrefix}-menu-list-tmp`;
-        _registerItems(temporaryHandlerDict, container);
-        list.appendChild(container);
-    }
 }
 
 async function downloadURLs(urls, handler, useXHR=false, ...params) {
