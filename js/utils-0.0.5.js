@@ -1,5 +1,4 @@
 var customPrefix = "";
-var createMenuAdhocHandlerDict = null;
 
 const currying = (fn, ...params) => ((...more) => fn(...params, ...more));
 
@@ -256,12 +255,12 @@ async function createMenu(handlerDict) {
     }
     
     function _addAdhocItems() {
-        if (createMenuAdhocHandlerDict !== null) {
-            const origContainer = document.getElementById(`${customPrefix}-menu-list-tmp`);
-            if (origContainer) {
-                origContainer.remove();
-            }
+        const origContainer = document.getElementById(`${customPrefix}-menu-list-tmp`);
+        if (origContainer) {
+            origContainer.remove();
+        }
 
+        if (createMenuAdhocHandlerDict instanceof Object) {
             const container = document.createElement("div");
             container.id = `${customPrefix}-menu-list-tmp`;
             _registerItems(createMenuAdhocHandlerDict, container);
