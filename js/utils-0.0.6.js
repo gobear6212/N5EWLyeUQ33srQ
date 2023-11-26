@@ -260,7 +260,7 @@ async function createMenu(handlerDict) {
             origContainer.remove();
         }
 
-        if (createMenuAdhocHandlerDict instanceof Object) {
+        if (typeof createMenuAdhocHandlerDict !== "undefined" && createMenuAdhocHandlerDict instanceof Object) {
             const container = document.createElement("div");
             container.id = `${customPrefix}-menu-list-tmp`;
             _registerItems(createMenuAdhocHandlerDict, container);
