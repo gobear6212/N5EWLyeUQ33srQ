@@ -107,7 +107,7 @@ function youtubeHD(use_default) {
     const DEBUG = false;
  
     // Possible resolution choices (in decreasing order, i.e. highres is the best):
-    const resolutions = ['highres', 'hd2880', 'hd2160', 'hd1440', 'hd1080', 'hd720', 'large', 'medium', 'small', 'tiny'];
+    var resolutions = ['highres', 'hd2880', 'hd2160', 'hd1440', 'hd1080', 'hd720', 'large', 'medium', 'small', 'tiny'];
 
     const targetIdx = resolutions.indexOf(settings.targetRes),
           ltTarget = resolutions.slice(targetIdx+1),
