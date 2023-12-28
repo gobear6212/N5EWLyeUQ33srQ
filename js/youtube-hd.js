@@ -109,13 +109,13 @@ function youtubeHD(use_default) {
     // Possible resolution choices (in decreasing order, i.e. highres is the best):
     const resolutions = ['highres', 'hd2880', 'hd2160', 'hd1440', 'hd1080', 'hd720', 'large', 'medium', 'small', 'tiny'];
 
-    const targetIdx = resolutions.indexOf(targetRes),
+    const targetIdx = resolutions.indexOf(settings.targetRes),
           ltTarget = resolutions.slice(targetIdx+1),
           gtTarget = resolutions.slice(0, targetIdx);
     if (preferHigh) {
-        resolutions = [targetRes, ...gtTarget.reverse(), ...ltTarget];
+        resolutions = [settings.targetRes, ...gtTarget.reverse(), ...ltTarget];
     } else {
-        resolutions = [targetRes, ...ltTarget, ...gtTarget.reverse()];
+        resolutions = [settings.targetRes, ...ltTarget, ...gtTarget.reverse()];
     }
 
     // youtube has to be at least 480x270 for the player UI
