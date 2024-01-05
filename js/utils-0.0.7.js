@@ -55,10 +55,10 @@ async function insertScript(mode, str, callback=null, doc=document, unique=true)
     return script;
 }
 
-async function insertScriptAsync(scriptList, doAsync=true, doc=document) {
+async function insertScriptAsync(scriptList, doAsync=true, doc=document, unique=true) {
     function _insertScriptPromise(mode, str) {
         return new Promise((resolve, reject) => {
-            insertScript(mode, str, resolve, doc);
+            insertScript(mode, str, resolve, doc, unique);
         });        
     }
 
