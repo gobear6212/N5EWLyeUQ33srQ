@@ -2,6 +2,10 @@ var customPrefix = "";
 
 const currying = (fn, ...params) => ((...more) => fn(...params, ...more));
 
+function delay(millisecond) {   // in ms
+    return new Promise(resolve => setTimeout(resolve, millisecond));
+}
+
 async function hashString(string, algorithm="SHA-1") {
     let bits = await crypto.subtle.digest(algorithm, new TextEncoder().encode(string));
     return Array.from(new Uint8Array(bits)).join('');
