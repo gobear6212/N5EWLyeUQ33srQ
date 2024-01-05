@@ -29,10 +29,10 @@ function documentReadyAsync(doc=document) {
     });
 }
 
-async function insertScript(mode, str, callback=null, doc=document) {
+async function insertScript(mode, str, callback=null, doc=document, unique=true) {
     let hash = await hashString(str)
     let match = document.getElementById(hash);
-    if (match) {
+    if (unique && match) {
         callback();
         return match;
     }
