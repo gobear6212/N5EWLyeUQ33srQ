@@ -287,8 +287,8 @@ async function createMenu(handlerDict) {
     _registerItems(handlerDict, list);
 }
 
-async function downloadURLs(urls, handler, useXHR=false, ...params) {
-    let config = { "method": "GET" };
+async function downloadURLs(urls, handler, moreConfig={}, useXHR=false, ...params) {
+    const config = { "method": "GET", ...moreConfig };
     async function _downloadURL(url, idx) {
         try {
             if (useXHR) {
@@ -305,11 +305,6 @@ async function downloadURLs(urls, handler, useXHR=false, ...params) {
         } catch(error) {
             throw [url, error];
         }
-    }
-
-    if (useXHR) {
-        config = {...config, ...params[0]}
-        params.splice(0, 1);
     }
 
     const invalidPatterns = [undefined, null, "", "#"];
