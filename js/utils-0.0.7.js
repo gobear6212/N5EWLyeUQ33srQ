@@ -2,6 +2,13 @@ var customPrefix = "";
 
 const currying = (fn, ...params) => ((...more) => fn(...params, ...more));
 
+// inclusive start and end
+// descending if start > end and step < 0
+function rangeArray(start, end, step=1) {
+    const length = (end - start) / step + 1;
+    return Array.from({length: length}, (_, index) => start + index * step);
+}
+
 function delay(millisecond) {   // in ms
     return new Promise(resolve => setTimeout(resolve, millisecond));
 }
