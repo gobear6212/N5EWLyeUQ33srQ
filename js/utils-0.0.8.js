@@ -2,6 +2,15 @@ var customPrefix = "";
 
 const currying = (fn, ...params) => ((...more) => fn(...params, ...more));
 
+const escapeHTMLPolicy = typeof(trustedTypes) === "undefined" ? null :
+                            trustedTypes.createPolicy("forceInner", {
+                                createHTML: (toEscapeHTML) => toEscapeHTML
+                            });
+
+const innerHTMLWrapper = escapeHTMLPolicy === null ? 
+                            (html) => html :
+                            (html) => escapeHTMLPolicy.createHTML(html);
+
 // inclusive start and end
 // descending if start > end and step < 0
 function rangeArray(start, end, step=1) {
@@ -87,7 +96,7 @@ function insertStylesheet(mode, str, doc=document) {
     let stylesheet;
     if (mode === "text") {
         stylesheet = doc.createElement("style");
-        stylesheet.innerHTML = str;
+        stylesheet.innerText = str;
     } else if (mode === "src") {
         stylesheet = doc.createElement("link");
         stylesheet.rel = "stylesheet";
@@ -170,13 +179,13 @@ async function createMenu(handlerDict) {
     function _createWrapper() {
         let wrapper = document.createElement("div");
         wrapper.id = `${customPrefix}-menu-wrapper`;
-        wrapper.innerHTML = `
+        wrapper.innerHTML = innerHTMLWrapper(`
         <div id="${customPrefix}-menu-box">
             <div id="${customPrefix}-menu-list"></div>
             <hr />
             <input id="${customPrefix}-menu-input" type="text"></input>
         </div>
-        `;
+        `);
         document.body.appendChild(wrapper);
         
         insertStylesheet("text", `
@@ -250,7 +259,7 @@ async function createMenu(handlerDict) {
         for (const [key, value] of Object.entries(handlers)) {
             let item = document.createElement("div");
             item.className = `${customPrefix}-menu-item`;
-            item.innerHTML = key;
+            item.innerText = key;
             item.addEventListener("click", (ev) => {
                 if (typeof value == "function") {
                     let input = document.getElementById(`${customPrefix}-menu-input`).value;
