@@ -49,60 +49,113 @@ function documentReadyAsync(doc=document) {
     });
 }
 
-async function insertScript(mode, str, callback=null, doc=document, unique=true) {
-    let hash = await hashString(str)
-    let match = document.getElementById(hash);
-    if (unique && match) {
-        callback();
-        return match;
+async function insertScript(args=null) {
+    if (args === null || typeof args !== "object") {
+        return;
     }
+
+    const mode = args["mode"] || null,
+          content = args["content"] || null,
+          callback = args["callback"] || () => undefined,
+          doc = args["doc"] || document,
+          unique = args["unique"] || true;
+
+    if (mode === null || content === null) {
+        return;
+    }
+    
+    let id = null;
+    if (unique) {
+        id = args["id"] || await hashString(content);
+        const match = doc.getElementById(id);
+        if (match) {
+            callback();
+            return match;            
+        }
+    }
+
     var script = doc.createElement("script");
-    script.id = hash;
+    script.id = id;
     script.type = "text/javascript";
     if (mode === "text") {
-        script.text = str;
+        script.text = content;
     } else if (mode === "src") {
-        script.src = str;
+        script.src = content;
     }
     (doc.head || doc.body || doc.documentElement).appendChild(script);
-    if (callback) {
-        if (mode === "text") {
-            callback();
-        } else if (mode === "src") {
-            script.addEventListener('load', function() { callback(); });
-        }
+
+    if (mode === "text") {
+        callback();
+    } else if (mode === "src") {
+        script.addEventListener('load', () => callback());
     }
     return script;
 }
 
-async function insertScriptAsync(scriptList, doAsync=true, doc=document, unique=true) {
-    function _insertScriptPromise(mode, str) {
+async function insertScriptAsync(scriptList, args=null) {
+    function _insertScriptPromise(mode=null, content=null, id=null) {
         return new Promise((resolve, reject) => {
-            insertScript(mode, str, resolve, doc, unique);
+            insertScript({
+                "mode": mode,
+                "content": content,
+                "callback": resolve,
+                "doc": doc,
+                "unique": unique,
+                "id": id
+            });
         });        
     }
 
+    if (args === null || typeof args !== "object") {
+        args = {};
+    }
+
+    const doc = args["doc"] || document,
+          unique = args["unique"] || true,
+          sequential = args["sequential"] || false;
+
     let promises = [];
     for (const item of scriptList) {
-        if (doAsync)
-            promises.push(_insertScriptPromise(item[0], item[1]));
-        else
-            promises.push(await _insertScriptPromise(item[0], item[1]));
+        const promise = sequential ? await _insertScriptPromise(...item) : _insertScriptPromise(...item);
+        promises.push(promise);
     }
     return Promise.all(promises);
 }
 
-function insertStylesheet(mode, str, doc=document) {
+async function insertStylesheet(args=null) {
+    if (args === null || typeof args !== "object") {
+        return;
+    }
+
+    const mode = args["mode"] || null,
+          content = args["content"] || null,
+          doc = args["doc"] || document,
+          unique = args["unique"] || true;
+
+    if (mode === null || content === null) {
+        return;
+    }
+
+    let id = null;
+    if (unique) {
+        id = args["id"] || await hashString(content);
+        const match = doc.getElementById(id);
+        if (match) {
+            return match;
+        }
+    }
+
     let stylesheet;
     if (mode === "text") {
         stylesheet = doc.createElement("style");
-        stylesheet.innerText = str;
+        stylesheet.innerText = content;
     } else if (mode === "src") {
         stylesheet = doc.createElement("link");
         stylesheet.rel = "stylesheet";
         stylesheet.type = "text/css";
-        stylesheet.href = str;
+        stylesheet.href = content;
     }
+    stylesheet.id = id;
     (doc.head || doc.body || doc.documentElement).appendChild(stylesheet);
     return stylesheet;
 }
@@ -128,12 +181,14 @@ function elemToFullscreen(elem, options) {
     ]?.(options);
 }
 
-function setElemDisplay(elem, mode) {
+async function setElemDisplay(elem, mode) {
     const customHiddenClass = `${customPrefix}-custom-hidden`;
-    if (!document.getElementById(customHiddenClass)) {
-        const stylesheet = insertStylesheet("text", `.${customHiddenClass} { display: none !important;}`);
-        stylesheet.id = customHiddenClass;
-    }
+    const _ = await insertStylesheet({
+        "mode": "text",
+        "content": `.${customHiddenClass} { display: none !important;}`,
+        "unique": true,
+        "id": `${customPrefix}-setElemDisplay-style`
+    });
 
     const isHidden = elem.classList.contains(customHiddenClass);
     if (mode !== "toggle") {
@@ -176,7 +231,7 @@ function nClicksListener(n, handler, excludedTags, isCapturing) {
 }
 
 async function createMenu(handlerDict) {
-    function _createWrapper() {
+    async function _createWrapper() {
         let wrapper = document.createElement("div");
         wrapper.id = `${customPrefix}-menu-wrapper`;
         wrapper.innerHTML = innerHTMLWrapper(`
@@ -188,64 +243,69 @@ async function createMenu(handlerDict) {
         `);
         document.body.appendChild(wrapper);
         
-        insertStylesheet("text", `
-            #${customPrefix}-menu-wrapper {
-               all: initial;
-            }
+        const _ = await insertStylesheet({
+            "mode": "text",
+            "content": `
+                #${customPrefix}-menu-wrapper {
+                   all: initial;
+                }
 
-            #${customPrefix}-menu-wrapper * {
-               all: revert !important;
-            }
+                #${customPrefix}-menu-wrapper * {
+                   all: revert !important;
+                }
 
-            #${customPrefix}-menu-box {
-                position: fixed !important;
-                top: 50% !important;
-                left: 50% !important;
-                transform: translate(-50%, -50%) !important;
-                z-index: 2147483647 !important;
-                max-width: ${isMobile? "60%" : "50%"} !important;
-                box-shadow: 0 .125em .25em !important;
-                border: 1px !important;
-                padding: 0.75em !important;
-                border-radius: 0.25em !important;
-                background-color: white !important;
-                text-align: center !important;
-                font-weight: 300 !important;
-                font-size: 1em !important;
-                font-family: Helvetica, Arial, sans-serif !important;
-                color: #2d2d2d !important;
-            }
+                #${customPrefix}-menu-box {
+                    position: fixed !important;
+                    top: 50% !important;
+                    left: 50% !important;
+                    transform: translate(-50%, -50%) !important;
+                    z-index: 2147483647 !important;
+                    max-width: ${isMobile? "60%" : "50%"} !important;
+                    box-shadow: 0 .125em .25em !important;
+                    border: 1px !important;
+                    padding: 0.75em !important;
+                    border-radius: 0.25em !important;
+                    background-color: white !important;
+                    text-align: center !important;
+                    font-weight: 300 !important;
+                    font-size: 1em !important;
+                    font-family: Helvetica, Arial, sans-serif !important;
+                    color: #2d2d2d !important;
+                }
 
-            #${customPrefix}-menu-input {
-                width: 90% !important;
-                max-width: 100% !important;
-            }
+                #${customPrefix}-menu-input {
+                    width: 90% !important;
+                    max-width: 100% !important;
+                }
 
-            #${customPrefix}-menu-list div.${customPrefix}-menu-item {
-                margin: ${isMobile? "5px" : "3px"} 0 !important;
-                cursor: pointer !important;
-            }
+                #${customPrefix}-menu-list div.${customPrefix}-menu-item {
+                    margin: ${isMobile? "5px" : "3px"} 0 !important;
+                    cursor: pointer !important;
+                }
 
-            #${customPrefix}-menu-list div.${customPrefix}-menu-item:hover {
-                background-color: #f0f0f0 !important;
-            }
-        `);
+                #${customPrefix}-menu-list div.${customPrefix}-menu-item:hover {
+                    background-color: #f0f0f0 !important;
+                }
+            `,
+            "unique": true,
+            "id": `${customPrefix}-createMenu-style`
+        });
 
-        setElemDisplay(wrapper, "toggle");
+        await setElemDisplay(wrapper, "toggle");
 
         if (isMobile) {
             // document.addEventListener("dblclick", () => {
             //     ev.preventDefault();
             // }, true);
-            nClicksListener(2, (ev) => {
+            nClicksListener(2, async (ev) => {
                 _addAdhocItems();
-                const isHidden = setElemDisplay(wrapper, "toggle");
+                const isHidden = await setElemDisplay(wrapper, "toggle");
             }, ["A", "INPUT", "BUTTON", "IMG"], true);
         } else {
-            document.addEventListener("keydown", function(ev) {
+            document.addEventListener("keydown", async function(ev) {
                 if (ev.keyCode == 48 && ev.ctrlKey) {   // 48 = "0"
                     _addAdhocItems();
-                    const isHidden = setElemDisplay(wrapper, "toggle");
+                    const isHidden = await setElemDisplay(wrapper, "toggle");
                     if (isHidden) {
                         document.getElementById(`${customPrefix}-menu-input`).focus();
                     }
@@ -255,7 +315,7 @@ async function createMenu(handlerDict) {
         return wrapper;
     }
 
-    function _registerItems(handlers, parent) {
+    async function _registerItems(handlers, parent) {
         for (const [key, value] of Object.entries(handlers)) {
             let item = document.createElement("div");
             item.className = `${customPrefix}-menu-item`;
@@ -268,7 +328,7 @@ async function createMenu(handlerDict) {
                     let fn = value[0];
                     fn(...value.slice(1));
                 }
-                setElemDisplay(wrapper, "toggle");
+                await setElemDisplay(wrapper, "toggle");
             });
             parent.appendChild(item);
         };
@@ -283,17 +343,33 @@ async function createMenu(handlerDict) {
         if (typeof createMenuAdhocHandlerDict !== "undefined" && createMenuAdhocHandlerDict instanceof Object) {
             const container = document.createElement("div");
             container.id = `${customPrefix}-menu-list-tmp`;
-            _registerItems(createMenuAdhocHandlerDict, container);
+            await _registerItems(createMenuAdhocHandlerDict, container);
             list.appendChild(container);
         }
     }
 
     await documentReadyAsync();
 
-    const wrapper = document.getElementById(`${customPrefix}-menu-wrapper`) || _createWrapper(),
+    const wrapper = document.getElementById(`${customPrefix}-menu-wrapper`) || await _createWrapper(),
           list = document.getElementById(`${customPrefix}-menu-list`);
 
-    _registerItems(handlerDict, list);
+    await _registerItems(handlerDict, list);
+}
+
+function openURL(template, args, term=null) {
+    let targetUrl = window.location;
+    let url = template.replaceAll("[hostname]", targetUrl.hostname)
+                      .replaceAll("[origin]", targetUrl.origin)
+                      .replaceAll("[href]", targetUrl.href)
+                      .replaceAll("[encoded_href_once]", encodeURIComponent(targetUrl.href))
+                      .replaceAll("[encoded_href_twice]", encodeURIComponent(encodeURIComponent(targetUrl.href)));
+    if (term !== null) {
+        url = url.replaceAll("[term]", term);
+    }
+    if ("replaceHostname" in args && args["replaceHostname"] === true && "newHostname" in args) {
+        url = url.replace(targetUrl.hostname, args["newHostname"]);
+    }
+    window.open(url);
 }
 
 async function downloadURLs(urls, handler, moreConfig={}, useXHR=false, ...params) {
