@@ -56,7 +56,7 @@ async function insertScript(args=null) {
 
     const mode = args["mode"] || null,
           content = args["content"] || null,
-          callback = args["callback"] || () => undefined,
+          callback = args["callback"] || (() => undefined),
           doc = args["doc"] || document,
           unique = args["unique"] || true;
 
@@ -230,6 +230,12 @@ function nClicksListener(n, handler, excludedTags, isCapturing) {
     }, isCapturing);
 }
 
+// handlerDict = {
+//     "handler": function,
+//     "args": Array,
+//     "needInput": Boolean,
+//     "checker": function,
+// }
 async function createMenu(handlerDict) {
     async function _createWrapper() {
         let wrapper = document.createElement("div");
@@ -293,18 +299,21 @@ async function createMenu(handlerDict) {
 
         await setElemDisplay(wrapper, "toggle");
 
+        const menuAppearEvent = new Event(`${customPrefix}-menu-appear`);
         if (isMobile) {
             // document.addEventListener("dblclick", () => {
             //     ev.preventDefault();
             // }, true);
             nClicksListener(2, async (ev) => {
                 _addAdhocItems();
-                const isHidden = await setElemDisplay(wrapper, "toggle");
+                wrapper.querySelectorAll(`div.${customPrefix}-menu-item`).forEach((item) => item.dispatchEvent(menuAppearEvent));
+                const _ = await setElemDisplay(wrapper, "toggle");
             }, ["A", "INPUT", "BUTTON", "IMG"], true);
         } else {
             document.addEventListener("keydown", async function(ev) {
                 if (ev.keyCode == 48 && ev.ctrlKey) {   // 48 = "0"
                     _addAdhocItems();
+                    wrapper.querySelectorAll(`div.${customPrefix}-menu-item`).forEach((item) => item.dispatchEvent(menuAppearEvent));
                     const isHidden = await setElemDisplay(wrapper, "toggle");
                     if (isHidden) {
                         document.getElementById(`${customPrefix}-menu-input`).focus();
@@ -315,21 +324,39 @@ async function createMenu(handlerDict) {
         return wrapper;
     }
 
-    async function _registerItems(handlers, parent) {
+    function _registerItems(handlers, parent) {
         for (const [key, value] of Object.entries(handlers)) {
+            if (value === null || typeof value !== "object") {
+                continue;
+            }
+
+            const handler = value["handler"] || null,
+                  args = value["args"] || [],
+                  needInput = value["needInput"] || false,
+                  checker = value["checker"] || (() => true);
+
+            if (handler === null) {
+                continue;
+            }
+
             let item = document.createElement("div");
             item.className = `${customPrefix}-menu-item`;
             item.innerText = key;
-            item.addEventListener("click", (ev) => {
-                if (typeof value == "function") {
+
+            item.addEventListener("click", () => {
+                if (needInput) {
                     let input = document.getElementById(`${customPrefix}-menu-input`).value;
-                    value(input);
+                    handler(input, ...args);
                 } else {
-                    let fn = value[0];
-                    fn(...value.slice(1));
+                    handler(...args);
                 }
-                await setElemDisplay(wrapper, "toggle");
+                setElemDisplay(wrapper, "toggle");
             });
+
+            item.addEventListener(`${customPrefix}-menu-appear`, () => {
+                setElemDisplay(item, checker() === false ? "none" : "block");
+            });
+
             parent.appendChild(item);
         };
     }
@@ -343,7 +370,7 @@ async function createMenu(handlerDict) {
         if (typeof createMenuAdhocHandlerDict !== "undefined" && createMenuAdhocHandlerDict instanceof Object) {
             const container = document.createElement("div");
             container.id = `${customPrefix}-menu-list-tmp`;
-            await _registerItems(createMenuAdhocHandlerDict, container);
+            _registerItems(createMenuAdhocHandlerDict, container);
             list.appendChild(container);
         }
     }
@@ -353,7 +380,7 @@ async function createMenu(handlerDict) {
     const wrapper = document.getElementById(`${customPrefix}-menu-wrapper`) || await _createWrapper(),
           list = document.getElementById(`${customPrefix}-menu-list`);
 
-    await _registerItems(handlerDict, list);
+    _registerItems(handlerDict, list);
 }
 
 function openURL(template, args, term=null) {
