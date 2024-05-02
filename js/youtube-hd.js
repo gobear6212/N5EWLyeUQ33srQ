@@ -23,8 +23,8 @@ function youtubeHD(use_default) {
         chosenRes = use_default? "tiny" : (isExternalMonitor? "hd720" : "large");
         preferHigh = !use_default;
     } else if (device['Linux']) {
-        chosenRes = use_default? "hd1080" : "tiny";
-        preferHigh = use_default;
+        chosenRes = "hd1080";
+        preferHigh = true;
     } else if (device['iPhone']) {
         chosenRes = use_default? "tiny" : "medium";
         preferHigh = false;
