@@ -1,4 +1,4 @@
-function youtubeHD(use_default) {
+function youtubeHD(chosenRes, preferHigh) {
     "use strict";
 
     // --- SETTINGS -------
@@ -9,29 +9,6 @@ function youtubeHD(use_default) {
     // Otherwise, your settings changes will NOT have an effect because it will used the saved settings.
     // After the script has next been run by loading a video with "overwriteStoredSettings" as true, your settings will be updated.
     // Then after that you can set it to false again to prevent your settings from being changed by an update.
-
-    var chosenRes, preferHigh;
-    const ua = navigator.userAgent;
-    const device = {
-        MacOS: /Mac OS X/.test(ua),
-        Linux: /Linux/.test(ua),
-        iPhone: /iPhone/.test(ua),
-    }
-    const isExternalMonitor = window.screen.width === 1920;
-
-    if (device['MacOS']) {
-        chosenRes = use_default? "tiny" : (isExternalMonitor? "hd720" : "large");
-        preferHigh = !use_default;
-    } else if (device['Linux']) {
-        chosenRes = "hd1080";
-        preferHigh = true;
-    } else if (device['iPhone']) {
-        chosenRes = use_default? "tiny" : "medium";
-        preferHigh = false;
-    } else {
-        chosenRes = use_default? "hd720" : "tiny";
-        preferHigh = use_default;
-    }
 
     let settings = {
 
