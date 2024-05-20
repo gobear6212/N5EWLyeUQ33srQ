@@ -396,7 +396,11 @@ function openURL(template, args, term=null) {
     if ("replaceHostname" in args && args["replaceHostname"] === true && "newHostname" in args) {
         url = url.replace(targetUrl.hostname, args["newHostname"]);
     }
-    window.open(url);
+    if ("nativeNewTab" in args && args["nativeNewTab"] === true && typeof GM_openInTab === "function") {
+       GM_openInTab(url, { active: true, insert: true }); 
+    } else {
+        window.open(url);
+    }
 }
 
 async function downloadURLs(urls, handler, moreConfig={}, useXHR=false, ...params) {
@@ -441,13 +445,17 @@ async function downloadURLs(urls, handler, moreConfig={}, useXHR=false, ...param
 
 function GMxmlHttpRequestAsync(url, config) {
     return new Promise((resolve, reject) => {
-        GM.xmlHttpRequest({
-            ...config,
-            "url": url,
-            "onload": (response) => resolve(response),
-            "onerror": (response) => reject(response.status),
-            "ontimeout": (response) => reject(response.status),
-        }).catch((err) => reject(err));
+        if (typeof GM.xmlHttpRequest === "function") {
+            GM.xmlHttpRequest({
+                ...config,
+                "url": url,
+                "onload": (response) => resolve(response),
+                "onerror": (response) => reject(response.status),
+                "ontimeout": (response) => reject(response.status),
+            }).catch((err) => reject(err));
+        } else {
+            reject("GM.xmlHttpRequest is not exposed");
+        }
     });
 }
 
