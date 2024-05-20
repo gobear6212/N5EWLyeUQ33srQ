@@ -325,6 +325,11 @@ async function createMenu(handlerDict) {
     }
 
     function _registerItems(handlers, parent) {
+        const nonEmpty = parent.children.length > 0;
+        if (nonEmpty) {
+            let divider = document.createElement("hr");
+            parent.appendChild(divider);
+        }
         for (const [key, value] of Object.entries(handlers)) {
             if (value === null || typeof value !== "object") {
                 continue;
