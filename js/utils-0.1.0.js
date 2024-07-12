@@ -46,7 +46,7 @@ async function hashString(string, algorithm="SHA-1") {
         const bits = await crypto.subtle.digest(algorithm, new TextEncoder().encode(string));
         return Array.from(new Uint8Array(bits)).join('');
     } else {
-        cyrb53(string);
+        return cyrb53(string);
     }
 }
 
