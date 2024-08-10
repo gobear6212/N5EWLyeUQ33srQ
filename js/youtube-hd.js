@@ -1,3 +1,12 @@
+const trustedTypesPolicyYoutubeHD = typeof(trustedTypes) === "undefined" ? null :
+                            trustedTypes.createPolicy("escapeYoutubeHD", {
+                                createHTML: (toEscapeHTML) => toEscapeHTML,
+                            });
+
+const innerHTMLWrapper = trustedTypesPolicyYoutubeHD === null ? 
+                            (html) => html :
+                            (html) => trustedTypesPolicyYoutubeHD.createHTML(html);
+
 function youtubeHD(chosenRes, preferHigh) {
     "use strict";
 
@@ -294,12 +303,12 @@ function youtubeHD(chosenRes, preferHigh) {
                         errorStyle = doc.createElement("style");
                         errorStyle.type = "text/css";
                         errorStyle.id = "ythdStyleSheet";
-                        errorStyle.innerHTML = styleContent;
+                        errorStyle.innerHTML = innerHTMLWrapper(styleContent);
                         doc.head.appendChild(errorStyle);
                     }
                     else
                     {
-                        errorStyle.innerHTML = styleContent;
+                        errorStyle.innerHTML = innerHTMLWrapper(styleContent);
                     }
                 }
 
@@ -378,12 +387,12 @@ min-height: " + height + "px !important; max-height: none !important; height: " 
             ythdStyle = doc.createElement("style");
             ythdStyle.type = "text/css";
             ythdStyle.id = "ythdStyleSheet";
-            ythdStyle.innerHTML = styleContent;
+            ythdStyle.innerHTML = innerHTMLWrapper(styleContent);
             doc.head.appendChild(ythdStyle);
         }
         else
         {
-            ythdStyle.innerHTML = styleContent;
+            ythdStyle.innerHTML = innerHTMLWrapper(styleContent);
         }
 
         setHeight = height;
