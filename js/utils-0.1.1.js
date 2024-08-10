@@ -2,14 +2,24 @@ var customPrefix = "";
 
 const currying = (fn, ...params) => ((...more) => fn(...params, ...more));
 
-const escapeHTMLPolicy = typeof(trustedTypes) === "undefined" ? null :
-                            trustedTypes.createPolicy("forceInner", {
-                                createHTML: (toEscapeHTML) => toEscapeHTML
+const trustedTypesPolicy = typeof(trustedTypes) === "undefined" ? null :
+                            trustedTypes.createPolicy("default", {
+                                createHTML: (toEscapeHTML) => toEscapeHTML,
+                                createScriptURL: (toEscapeScriptURL) => toEscapeScriptURL,   // warning: this is unsafe!
+                                createScript: (toEscapeScript) => toEscapeScript,   // warning: this is unsafe!
                             });
 
-const innerHTMLWrapper = escapeHTMLPolicy === null ? 
+const innerHTMLWrapper = trustedTypesPolicy === null ? 
                             (html) => html :
-                            (html) => escapeHTMLPolicy.createHTML(html);
+                            (html) => trustedTypesPolicy.createHTML(html);
+
+const scriptURLWrapper = trustedTypesPolicy === null ? 
+                            (scriptURL) => scriptURL :
+                            (scriptURL) => trustedTypesPolicy.createScriptURL(scriptURL);
+
+const scriptWrapper = trustedTypesPolicy === null ? 
+                            (script) => script :
+                            (script) => trustedTypesPolicy.createScript(script);
 
 // inclusive start and end
 // descending if start > end and step < 0
@@ -101,9 +111,9 @@ async function insertScript(args=null) {
     script.id = id;
     script.type = "text/javascript";
     if (mode === "text") {
-        script.text = content;
+        script.text = scriptWrapper(content);
     } else if (mode === "src") {
-        script.src = content;
+        script.src = scriptURLWrapper(content);
     }
     (doc.head || doc.body || doc.documentElement).appendChild(script);
 
