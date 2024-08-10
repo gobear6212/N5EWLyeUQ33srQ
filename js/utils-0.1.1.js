@@ -3,7 +3,7 @@ var customPrefix = "";
 const currying = (fn, ...params) => ((...more) => fn(...params, ...more));
 
 const trustedTypesPolicy = typeof(trustedTypes) === "undefined" ? null :
-                            trustedTypes.createPolicy("default", {
+                            trustedTypes.createPolicy("escapeCustom", {
                                 createHTML: (toEscapeHTML) => toEscapeHTML,
                                 createScriptURL: (toEscapeScriptURL) => toEscapeScriptURL,   // warning: this is unsafe!
                                 createScript: (toEscapeScript) => toEscapeScript,   // warning: this is unsafe!
