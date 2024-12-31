@@ -317,12 +317,15 @@ async function createMenu(handlerDict) {
                     max-width: 100% !important;
                 }
 
-                #${customPrefix}-menu-list div.${customPrefix}-menu-item {
+                #${customPrefix}-menu-list div.${customPrefix}-menu-row {
                     margin: ${isMobile? "5px" : "3px"} 0 !important;
+                }
+
+                #${customPrefix}-menu-list div.${customPrefix}-menu-item {
                     cursor: pointer !important;
                 }
 
-                #${customPrefix}-menu-list div.${customPrefix}-menu-item.half-width {
+                #${customPrefix}-menu-list div.${customPrefix}-menu-item.${customPrefix}-half-width {
                     width: 50% !important;
                     display: inline-block !important
                 }
@@ -381,13 +384,14 @@ async function createMenu(handlerDict) {
 
             if (handler === null) {
                 let item = document.createElement("div");
+                item.className = `${customPrefix}-menu-row`;
                 _registerItems(value, item, true);
                 parent.appendChild(item);
                 continue;
             }
 
             let item = document.createElement("div");
-            item.className = `${customPrefix}-menu-item ${nested ? "half-width" : ""}`;
+            item.className = `${customPrefix}-menu-item ${customPrefix}-${nested ? "half-width" : "menu-row"}`;
             item.innerText = key;
 
             item.addEventListener("click", () => {
