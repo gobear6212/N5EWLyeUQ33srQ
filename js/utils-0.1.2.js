@@ -322,6 +322,11 @@ async function createMenu(handlerDict) {
                     cursor: pointer !important;
                 }
 
+                #${customPrefix}-menu-list div.${customPrefix}-menu-item.half-width {
+                    width: 50% !important;
+                    display: inline-block !important
+                }
+
                 #${customPrefix}-menu-list div.${customPrefix}-menu-item:hover {
                     background-color: #f0f0f0 !important;
                 }
@@ -357,12 +362,13 @@ async function createMenu(handlerDict) {
         return wrapper;
     }
 
-    function _registerItems(handlers, parent) {
+    function _registerItems(handlers, parent, nested=false) {
         const nonEmpty = parent.children.length > 0;
-        if (nonEmpty) {
+        if (!nested && nonEmpty) {
             let divider = document.createElement("hr");
             parent.appendChild(divider);
         }
+
         for (const [key, value] of Object.entries(handlers)) {
             if (value === null || typeof value !== "object") {
                 continue;
@@ -371,14 +377,17 @@ async function createMenu(handlerDict) {
             const handler = value["handler"] || null,
                   args = value["args"] || [],
                   needInput = value["needInput"] || false,
-                  checker = value["checker"] || (() => true);
+                  checker = value["checker"] || undefined;
 
             if (handler === null) {
+                let item = document.createElement("div");
+                _registerItems(value, item, true);
+                parent.appendChild(item);
                 continue;
             }
 
             let item = document.createElement("div");
-            item.className = `${customPrefix}-menu-item`;
+            item.className = `${customPrefix}-menu-item ${nested ? "half-width" : ""}`;
             item.innerText = key;
 
             item.addEventListener("click", () => {
@@ -392,7 +401,9 @@ async function createMenu(handlerDict) {
             });
 
             item.addEventListener(`${customPrefix}-menu-appear`, () => {
-                setElemDisplay(item, checker() === false ? "none" : "block");
+                if (checker !== undefined) {
+                    setElemDisplay(item, checker() === false ? "none" : (nested ? "inline-block" : "block"));
+                }
             });
 
             parent.appendChild(item);
