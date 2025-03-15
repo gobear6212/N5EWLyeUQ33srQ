@@ -22,8 +22,122 @@ class EntriesBookmark {
         this.clickHandlerBinded = this.clickHandler.bind(this);
         this.findExistingEntryBinded = this.findExistingEntry.bind(this);
 
+        /*
+            this.buttonGroupProvider is usually used on a page describing a specific entry
+            this.findExistingEntry is usually used on a page listing some/all of the entries
+        */
         registerFn(this.buttonGroupProviderBinded, this.findExistingEntryBinded);
 
+        this.registerStyle();
+    }
+
+    buttonGroupProvider(name) {
+        const buttonGroup = document.createElement("div");
+        buttonGroup.classList.add(this.customButtonGroupClass);
+
+        const [existingEntry, _] = this.findExistingEntry(name);
+        for (const [key, value] of Object.entries(this.options)) {
+            const entryValue = this.getLabel(name, key);
+            const entryExists = existingEntry === entryValue;
+
+            const button = document.createElement("div");
+            button.innerText = entryExists? value[0] : value[1];
+            button.classList.add(this.customButtonClass);
+            button.classList.add(entryExists ? this.customButtonForbidClass : this.customButtonAllowClass);
+            button.dataset.actionKey = key;
+            button.dataset.actionPut = value[1];
+            button.dataset.actionDel = value[0];
+            button.dataset.entryValue = entryValue;
+            buttonGroup.appendChild(button);
+        }
+        buttonGroup.dataset.name = name;
+
+        buttonGroup.addEventListener("click", this.clickHandlerBinded)
+        return buttonGroup;
+    }
+
+    clickHandler(ev) {
+        const isButton = () => ev.target.classList.contains(this.customButtonClass);
+        const isButtonGroup = () => ev.currentTarget.classList.contains(this.customButtonGroupClass);
+        if (!isButton() || !isButtonGroup()) {
+            return;
+        }
+
+        const clickedButton = ev.target;
+        const buttonGroup = ev.currentTarget;
+
+        const action = clickedButton.innerText;
+        const actionKey = clickedButton.dataset.actionKey;
+        const entryValue = clickedButton.dataset.entryValue;
+        const toAdd = clickedButton.classList.contains(this.customButtonAllowClass);
+        const name = buttonGroup.dataset.name;
+
+        const confirmed = confirm(`${action} ${name}?`);
+        if (confirmed) {
+            this.entries = this.getEntries();   // fetch the latest entries when a write is to be performed
+            let [existingEntry, _] = this.findExistingEntry(name);
+
+            if (toAdd && existingEntry !== entryValue) {
+                this.entries.add(entryValue);
+                if (existingEntry !== null) {
+                    this.entries.delete(existingEntry);
+                }
+                existingEntry = entryValue;
+            } else if (!toAdd && existingEntry === entryValue) {
+                this.entries.delete(entryValue);
+                existingEntry = null;
+            }
+            this.setEntries(this.entries);
+
+            for (const _button of buttonGroup.children) {
+                const _entryValue = _button.dataset.entryValue;
+                if (_entryValue !== existingEntry) {
+                    _button.classList.add(this.customButtonAllowClass);
+                    _button.classList.remove(this.customButtonForbidClass);
+                    _button.innerText = _button.dataset.actionPut;
+                } else {
+                    _button.classList.add(this.customButtonForbidClass);
+                    _button.classList.remove(this.customButtonAllowClass);
+                    _button.innerText = _button.dataset.actionDel;
+                }
+            }
+        }
+    }
+
+    getEntries() {
+        return new Set(GM_getValue(this.key, []));
+    }
+
+    setEntries(entries) {
+        GM_setValue(this.key, Array.from(entries));
+    }
+
+    findExistingEntry(name) {
+        let existingEntry = null;
+        let actionKey = null;
+        for (const key of Object.keys(this.options)) {
+            const entryValue = this.getLabel(name, key);
+            if (this.entries.has(entryValue)) {
+                existingEntry = entryValue;
+                actionKey = key;
+                break;
+            }
+        }
+        return [existingEntry, actionKey];
+    }
+
+    getLabel(name, actionKey) {
+        return `${name}|${actionKey}`;
+    }
+
+    insertStylesheet(str, id, doc=document) {
+        const stylesheet = doc.createElement("style");
+        stylesheet.innerText = str;
+        stylesheet.id = id;
+        (doc.head || doc.body || doc.documentElement).appendChild(stylesheet);
+    }
+
+    registerStyle() {
         this.insertStylesheet(`
             .${this.customButtonGroupClass} {
                 all: revert;
@@ -63,126 +177,5 @@ class EntriesBookmark {
                 background-color: #dc3545;
             }
         `, `${customPrefix}-blocker-style`);
-    }
-
-    buttonGroupProvider(name) {
-        const buttonGroup = document.createElement("div");
-        buttonGroup.classList.add(this.customButtonGroupClass);
-
-        const [existingEntry, _] = this.findExistingEntry(name);
-        for (const [key, value] of Object.entries(this.options)) {
-            const entryValue = this.getLabel(name, key);
-            const entryExists = existingEntry === entryValue;
-
-            const button = document.createElement("div");
-            button.innerText = entryExists? value[0] : value[1];
-            button.classList.add(this.customButtonClass);
-            button.classList.add(entryExists ? this.customButtonForbidClass : this.customButtonAllowClass);
-            button.dataset.actionKey = key;
-            button.dataset.actionPut = value[1];
-            button.dataset.actionDel = value[0];
-            button.dataset.entryValue = entryValue;
-            buttonGroup.appendChild(button);
-        }
-        buttonGroup.dataset.name = name;
-        buttonGroup.dataset.existingEntry = existingEntry;
-
-        buttonGroup.addEventListener("click", this.clickHandlerBinded)
-        return buttonGroup;
-    }
-
-    clickHandler(ev) {
-        const isButton = () => ev.target.classList.contains(this.customButtonClass);
-        const isButtonGroup = () => ev.currentTarget.classList.contains(this.customButtonGroupClass);
-        if (!isButton() || !isButtonGroup()) {
-            return;
-        }
-
-        const action = ev.target.innerText;
-        const actionKey = ev.target.dataset.actionKey;
-        const entryValue = ev.target.dataset.entryValue;
-        const name = ev.currentTarget.dataset.name;
-        const existingEntry = ev.currentTarget.dataset.existingEntry;
-
-        const confirmed = confirm(`${action} ${name}?`);
-        if (confirmed) {
-            if (existingEntry !== "null") {
-                this.entries.delete(existingEntry);
-                ev.currentTarget.dataset.existingEntry = null;
-
-                const selectedElem = ev.currentTarget.querySelector(`div.${this.customButtonForbidClass}`);
-                if (selectedElem) {
-                    selectedElem.classList.add(this.customButtonAllowClass);
-                    selectedElem.classList.remove(this.customButtonForbidClass);
-                    selectedElem.innerText = selectedElem.dataset.actionPut;
-                }
-            }
-            if (existingEntry !== entryValue) {
-                this.entries.add(entryValue);
-                ev.currentTarget.dataset.existingEntry = entryValue;
-
-                ev.target.classList.add(this.customButtonForbidClass);
-                ev.target.classList.remove(this.customButtonAllowClass);
-            }
-
-            // in case there're new entries from other tabs
-            const latestEntries = this.getEntries();
-            latestEntries.delete(entryValue);
-            latestEntries.delete(existingEntry);
-            this.entries = this.setsUnion(this.entries, latestEntries);
-            this.setEntries();
-
-            const value = this.options[actionKey];
-            ev.target.innerText = this.entries.has(entryValue)? value[0] : value[1];
-        }
-    }
-
-    getEntries() {
-        return new Set(GM_getValue(this.key, []));
-    }
-
-    setEntries(entries) {
-        GM_setValue(this.key, Array.from(this.entries));
-    }
-
-    toggleEntry(entry) {
-        if (this.entries.has(entry)) {
-            this.entries.delete(entry);
-        } else {
-            this.entries.add(entry);
-        }
-    }
-
-    findExistingEntry(name) {
-        let existingEntry = null;
-        let actionKey = null;
-        for (const key of Object.keys(this.options)) {
-            const entryValue = this.getLabel(name, key);
-            if (this.entries.has(entryValue)) {
-                existingEntry = entryValue;
-                actionKey = key;
-                break;
-            }
-        }
-        return [existingEntry, actionKey];
-    }
-
-    getLabel(name, actionKey) {
-        return `${name}|${actionKey}`;
-    }
-
-    setsUnion(setA, setB) {
-      const _union = new Set(setA);
-      for (const elem of setB) {
-        _union.add(elem);
-      }
-      return _union;
-    }
-
-    insertStylesheet(str, id, doc=document) {
-        const stylesheet = doc.createElement("style");
-        stylesheet.innerText = str;
-        stylesheet.id = id;
-        (doc.head || doc.body || doc.documentElement).appendChild(stylesheet);
     }
 }
