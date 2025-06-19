@@ -123,12 +123,11 @@ async function insertScript(args=null) {
     //     script.src = scriptURLWrapper(content);
     // }
     // (doc.head || doc.body || doc.documentElement).appendChild(script);
-
-    const script = GM_addElement('script', {
+    const script = await GM_addElement('script', {
         id: id,
         type: "text/javascript",
-        textContent: mode === "text" ? scriptWrapper(content) : "",
-        src: mode === "src" ? scriptURLWrapper(content) : "",
+        textContent: mode === "text" ? content : "",
+        src: mode === "src" ? content : "",
     });
 
     if (mode === "text") {
@@ -196,7 +195,7 @@ async function insertStylesheet(args=null) {
     if (mode === "text") {
         // stylesheet = doc.createElement("style");
         // stylesheet.innerText = content;
-        stylesheet = GM_addElement('style', {
+        stylesheet = await GM_addElement('style', {
             textContent: content
         });
     } else if (mode === "src") {
@@ -204,7 +203,7 @@ async function insertStylesheet(args=null) {
         // stylesheet.rel = "stylesheet";
         // stylesheet.type = "text/css";
         // stylesheet.href = content;
-        stylesheet = GM_addElement('link', {
+        stylesheet = await GM_addElement('link', {
             rel: "stylesheet",
             type: "text/css",
             href: content,
