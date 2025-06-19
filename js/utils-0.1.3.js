@@ -1,3 +1,10 @@
+/*
+Grants the following in the script manager:
+    // @grant       GM.xmlHttpRequest
+    // @grant       GM_openInTab
+    // @grant       GM_addElement
+*/
+
 var customPrefix = "";
 
 const currying = (fn, ...params) => ((...more) => fn(...params, ...more));
@@ -107,15 +114,22 @@ async function insertScript(args=null) {
         }
     }
 
-    var script = doc.createElement("script");
-    script.id = id;
-    script.type = "text/javascript";
-    if (mode === "text") {
-        script.text = scriptWrapper(content);
-    } else if (mode === "src") {
-        script.src = scriptURLWrapper(content);
-    }
-    (doc.head || doc.body || doc.documentElement).appendChild(script);
+    // var script = doc.createElement("script");
+    // script.id = id;
+    // script.type = "text/javascript";
+    // if (mode === "text") {
+    //     script.text = scriptWrapper(content);
+    // } else if (mode === "src") {
+    //     script.src = scriptURLWrapper(content);
+    // }
+    // (doc.head || doc.body || doc.documentElement).appendChild(script);
+
+    const script = GM_addElement('script', {
+        id: id,
+        type: "text/javascript",
+        textContent: mode === "text" ? scriptWrapper(content) : "",
+        src: mode === "src" ? scriptURLWrapper(content) : "",
+    });
 
     if (mode === "text") {
         callback();
@@ -180,16 +194,24 @@ async function insertStylesheet(args=null) {
 
     let stylesheet;
     if (mode === "text") {
-        stylesheet = doc.createElement("style");
-        stylesheet.innerText = content;
+        // stylesheet = doc.createElement("style");
+        // stylesheet.innerText = content;
+        stylesheet = GM_addElement('style', {
+            textContent: content
+        });
     } else if (mode === "src") {
-        stylesheet = doc.createElement("link");
-        stylesheet.rel = "stylesheet";
-        stylesheet.type = "text/css";
-        stylesheet.href = content;
+        // stylesheet = doc.createElement("link");
+        // stylesheet.rel = "stylesheet";
+        // stylesheet.type = "text/css";
+        // stylesheet.href = content;
+        stylesheet = GM_addElement('link', {
+            rel: "stylesheet",
+            type: "text/css",
+            href: content,
+        });
     }
     stylesheet.id = id;
-    (doc.head || doc.body || doc.documentElement).appendChild(stylesheet);
+    // (doc.head || doc.body || doc.documentElement).appendChild(stylesheet);
     return stylesheet;
 }
 
@@ -456,11 +478,12 @@ function openURL(template, args, term=null) {
     }
 }
 
-async function downloadURLs(urls, handler, moreConfig={}, useXHR=false, ...params) {
+// useExtensionAPI: for circumventing CORS restriction
+async function downloadURLs(urls, handler, moreConfig={}, useExtensionAPI=false, ...params) {
     const config = { "method": "GET", ...moreConfig };
     async function _downloadURL(url, idx) {
         try {
-            if (useXHR) {
+            if (useExtensionAPI) {
                 let response = await GMxmlHttpRequestAsync(url, config);
                 return handler(response, idx, ...params);
             } else {

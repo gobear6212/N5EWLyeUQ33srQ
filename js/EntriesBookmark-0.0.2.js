@@ -1,3 +1,9 @@
+/*
+Grants the following in the script manager:
+    // @grant       GM_getValue
+    // @grant       GM_setValue
+*/
+
 class EntriesBookmark {
     constructor(name, registerFn) {
         const customPrefix = "Whw9cPZ7";
