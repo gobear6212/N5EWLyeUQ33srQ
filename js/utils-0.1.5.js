@@ -98,7 +98,8 @@ async function insertScript(args=null) {
           content = args["content"] || null,
           callback = args["callback"] || (() => undefined),
           doc = args["doc"] || document,
-          unique = args["unique"] || true;
+          unique = args["unique"] || true,
+          useLegacy = args["useLegacy"] || false;
 
     if (mode === null || content === null) {
         return;
@@ -114,21 +115,25 @@ async function insertScript(args=null) {
         }
     }
 
-    // var script = doc.createElement("script");
-    // script.id = id;
-    // script.type = "text/javascript";
-    // if (mode === "text") {
-    //     script.text = scriptWrapper(content);
-    // } else if (mode === "src") {
-    //     script.src = scriptURLWrapper(content);
-    // }
-    // (doc.head || doc.body || doc.documentElement).appendChild(script);
-    const script = await GM_addElement('script', {
-        id: id,
-        type: "text/javascript",
-        textContent: mode === "text" ? content : "",
-        src: mode === "src" ? content : "",
-    });
+    let script = null;
+    if (useLegacy) {
+        script = doc.createElement("script");
+        script.id = id;
+        script.type = "text/javascript";
+        if (mode === "text") {
+            script.text = scriptWrapper(content);
+        } else if (mode === "src") {
+            script.src = scriptURLWrapper(content);
+        }
+        (doc.head || doc.body || doc.documentElement).appendChild(script);
+    } else {
+        script = await GM_addElement('script', {
+            id: id,
+            type: "text/javascript",
+            textContent: mode === "text" ? content : "",
+            src: mode === "src" ? content : "",
+        });
+    }
 
     if (mode === "text") {
         callback();
@@ -144,10 +149,9 @@ async function insertScriptAsync(scriptList, args=null) {
             insertScript({
                 "mode": mode,
                 "content": content,
+                "id": id,
                 "callback": resolve,
-                "doc": doc,
-                "unique": unique,
-                "id": id
+                ...args
             });
         });        
     }
@@ -156,9 +160,7 @@ async function insertScriptAsync(scriptList, args=null) {
         args = {};
     }
 
-    const doc = args["doc"] || document,
-          unique = args["unique"] || true,
-          sequential = args["sequential"] || false;
+    const sequential = args["sequential"] || false;
 
     let promises = [];
     for (const item of scriptList) {
