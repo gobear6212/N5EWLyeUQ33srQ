@@ -18,11 +18,12 @@ class EntriesBookmark {
         this.customButtonForbidClass = `${customPrefix}-blocker-button-forbid`;
         this.customButtonGroupClass = `${customPrefix}-blocker-button-group`;
 
-        this.options = Object.freeze({
+        this.actions = Object.freeze({
             "b": ["Unblock", "Block"],   // blocked
             "h": ["Unhide", "Hide"],   // hidden
             "p": ["Unpin", "Pin"],   // pinned
         });
+        this.actionKeys = Object.keys(this.actions);
 
         this.buttonGroupProviderBinded = this.buttonGroupProvider.bind(this);
         this.clickHandlerBinded = this.clickHandler.bind(this);
@@ -42,7 +43,7 @@ class EntriesBookmark {
         buttonGroup.classList.add(this.customButtonGroupClass);
 
         const [existingEntry, _] = this.findExistingEntry(name);
-        for (const [key, value] of Object.entries(this.options)) {
+        for (const [key, value] of Object.entries(this.actions)) {
             const entryValue = this.getLabel(name, key);
             const entryExists = existingEntry === entryValue;
 
@@ -121,7 +122,7 @@ class EntriesBookmark {
     findExistingEntry(name) {
         let existingEntry = null;
         let actionKey = null;
-        for (const key of Object.keys(this.options)) {
+        for (const key of this.actionKeys) {
             const entryValue = this.getLabel(name, key);
             if (this.entries.has(entryValue)) {
                 existingEntry = entryValue;
