@@ -1,11 +1,11 @@
-const trustedTypesPolicyYoutubeHD = typeof(trustedTypes) === "undefined" ? null :
-                            trustedTypes.createPolicy("escapeYoutubeHD", {
-                                createHTML: (toEscapeHTML) => toEscapeHTML,
-                            });
+// const trustedTypesPolicyYoutubeHD = typeof(trustedTypes) === "undefined" ? null :
+//                             trustedTypes.createPolicy("escapeYoutubeHD", {
+//                                 createHTML: (toEscapeHTML) => toEscapeHTML,
+//                             });
 
-const innerHTMLWrapper = trustedTypesPolicyYoutubeHD === null ? 
-                            (html) => html :
-                            (html) => trustedTypesPolicyYoutubeHD.createHTML(html);
+// const innerHTMLWrapper = trustedTypesPolicyYoutubeHD === null ? 
+//                             (html) => html :
+//                             (html) => trustedTypesPolicyYoutubeHD.createHTML(html);
 
 function youtubeHD(chosenRes, preferHigh) {
     "use strict";
@@ -45,7 +45,10 @@ function youtubeHD(chosenRes, preferHigh) {
         //   instead of using youtube's default (if theater mode is enabled).
         // If useCustomSize is false, then the player will be resized to try to match the target resolution.
         //   If true, then it will use the customHeight variables (theater mode is always full page width).
+        // If removeBlackBars is true, will try to cap the height based on the current video's aspect ratio
+        //   if the screen size is smaller than the requested resolution
         changePlayerSize: false,
+        removeBlackBars: false,
         useCustomSize: false,
         customHeight: 600,
 
@@ -140,6 +143,17 @@ function youtubeHD(chosenRes, preferHigh) {
             return el.wrappedJSObject;
         }
         return el;
+    }
+
+
+    // --------------------
+
+
+    // Get player object
+    function getPlayer()
+    {
+    let ytPlayer = doc.getElementById("movie_player") || doc.getElementsByClassName("html5-video-player")[0];
+    return unwrapElement(ytPlayer);
     }
 
 
@@ -245,7 +259,7 @@ function youtubeHD(chosenRes, preferHigh) {
     // Set resolution, but only when API is ready (it should normally already be ready)
     function setResOnReady(ytPlayer, resolutionList)
     {
-        if (settings.useAPI && ytPlayer.getPlaybackQuality === undefined)
+        if (settings.useAPI && (ytPlayer.getPlaybackQuality === undefined || ytPlayer.getPlaybackQuality() == "unknown"))
         {
             win.setTimeout(setResOnReady, 100, ytPlayer, resolutionList);
         }
@@ -303,12 +317,12 @@ function youtubeHD(chosenRes, preferHigh) {
                         errorStyle = doc.createElement("style");
                         errorStyle.type = "text/css";
                         errorStyle.id = "ythdStyleSheet";
-                        errorStyle.innerHTML = innerHTMLWrapper(styleContent);
+                        errorStyle.textContent = styleContent;
                         doc.head.appendChild(errorStyle);
                     }
                     else
                     {
-                        errorStyle.innerHTML = innerHTMLWrapper(styleContent);
+                        errorStyle.textContent = styleContent;
                     }
                 }
 
@@ -355,6 +369,15 @@ function youtubeHD(chosenRes, preferHigh) {
             let i = Math.max(resolutions.indexOf(settings.targetRes), 0);
             height = Math.min(heights[i], win.innerHeight - (mastheadHeight + mastheadPadding));
             height = Math.max(height, 270);
+
+            if (settings.removeBlackBars)
+            {
+                let ytPlayer = getPlayer();
+                if (ytPlayer !== undefined && ytPlayer.getVideoAspectRatio !== undefined)
+                {
+                    height = Math.min(height, win.innerWidth / ytPlayer.getVideoAspectRatio());
+                }
+            }
         }
 
         resizePlayer(height);
@@ -367,7 +390,7 @@ function youtubeHD(chosenRes, preferHigh) {
     // resize the player
     function resizePlayer(height)
     {
-        debugLog("Setting video player size");
+        debugLog("Setting video player size to " + height);
 
         if (setHeight === height)
         {
@@ -387,12 +410,12 @@ min-height: " + height + "px !important; max-height: none !important; height: " 
             ythdStyle = doc.createElement("style");
             ythdStyle.type = "text/css";
             ythdStyle.id = "ythdStyleSheet";
-            ythdStyle.innerHTML = innerHTMLWrapper(styleContent);
+            ythdStyle.textContent = styleContent;
             doc.head.appendChild(ythdStyle);
         }
         else
         {
-            ythdStyle.innerHTML = innerHTMLWrapper(styleContent);
+            ythdStyle.textContent = styleContent;
         }
 
         setHeight = height;
@@ -406,17 +429,16 @@ min-height: " + height + "px !important; max-height: none !important; height: " 
 
     function main()
     {
-        let ytPlayer = doc.getElementById("movie_player") || doc.getElementsByClassName("html5-video-player")[0];
-        let ytPlayerUnwrapped = unwrapElement(ytPlayer);
+        let ytPlayer = getPlayer();
 
-        if (settings.autoTheater && ytPlayerUnwrapped)
+        if (settings.autoTheater && ytPlayer)
         {
             if (settings.allowCookies && doc.cookie.indexOf("wide=1") === -1)
             {
                 doc.cookie = "wide=1; domain=.youtube.com";
             }
 
-            setTheaterMode(ytPlayerUnwrapped);
+            setTheaterMode(ytPlayer);
         }
 
         if (settings.changePlayerSize && win.location.host.indexOf("youtube.com") !== -1 && win.location.host.indexOf("gaming.") === -1)
@@ -425,9 +447,9 @@ min-height: " + height + "px !important; max-height: none !important; height: " 
             window.addEventListener("resize", computeAndSetPlayerSize, true);
         }
 
-        if (settings.changeResolution && settings.setResolutionEarly && ytPlayerUnwrapped)
+        if (settings.changeResolution && settings.setResolutionEarly && ytPlayer)
         {
-            setResOnReady(ytPlayerUnwrapped, resolutions);
+            setResOnReady(ytPlayer, resolutions);
         }
 
         if (settings.changeResolution || settings.autoTheater)
@@ -438,18 +460,17 @@ min-height: " + height + "px !important; max-height: none !important; height: " 
                     return;
                 }
 
-                ytPlayer = doc.getElementById("movie_player") || doc.getElementsByClassName("html5-video-player")[0];
-                ytPlayerUnwrapped = unwrapElement(ytPlayer);
-                if (ytPlayerUnwrapped)
+                ytPlayer = getPlayer();
+                if (ytPlayer)
                 {
                     debugLog("Loaded new video");
                     if (settings.changeResolution)
                     {
-                        setResOnReady(ytPlayerUnwrapped, resolutions);
+                        setResOnReady(ytPlayer, resolutions);
                     }
                     if (settings.autoTheater)
                     {
-                        setTheaterMode(ytPlayerUnwrapped);
+                        setTheaterMode(ytPlayer);
                     }
                 }
             }, true );
