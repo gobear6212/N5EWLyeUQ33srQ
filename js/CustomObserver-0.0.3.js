@@ -12,7 +12,26 @@ class CustomObserver {
             this.controller = null;
             this.signal = null;
         }
+        
+        addObserver(observer) {
+            if (observer !== undefined) {
+                this.observers.push(observer);
+            }
+        }
 
+        addController(controller) {
+            if (controller) {
+                this.controller = controller;
+                this.signal = controller.signal;
+            }
+        }
+
+        addTimeoutHandler(handler) {
+            if (this.signal !== null) {
+                this.signal.addEventListener("abort", () => { handler(new Error("Aborted due to timeout")) });
+            }
+        }
+        
         clearStates() {
             this.observers.forEach((observer) => { observer.disconnect() });
             if (this.controller) { this.controller.abort() };
@@ -89,8 +108,7 @@ class CustomObserver {
         
         if (timeout !== null && typeof timeout === "number") {
             const controller = new AbortController();
-            observerChain.controller = controller;
-            observerChain.signal = controller.signal;
+            observerChain.addController(controller);
             setTimeout(() => { observerChain.clearStates() }, timeout);
         }
 
@@ -150,11 +168,9 @@ class CustomObserver {
 
     _observeChildAsync(parent, child, observerChain) {
         return new Promise((resolve, reject) => {
-            if (observerChain.signal) {
-                observerChain.signal.addEventListener("abort", () => { reject(new Error("Aborted due to timeout")) });
-            }
+            observerChain.addTimeoutHandler(reject);
             const childObserver = this.observeChild(parent, { [child]: resolve });
-            observerChain.observers.push(childObserver);
+            observerChain.addObserver(childObserver);
         });
     }
 } 
