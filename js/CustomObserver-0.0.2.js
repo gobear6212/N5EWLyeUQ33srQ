@@ -5,6 +5,23 @@ class CustomObserver {
         this.controller = null;
         this.signal = null;
     }
+    
+    static _CustomObserverChain = class {
+        constructor() {
+            this.observers = [];
+            this.controller = null;
+            this.signal = null;
+        }
+
+        clearStates() {
+            this.observers.forEach((observer) => { observer.disconnect() });
+            if (this.controller) { this.controller.abort() };
+
+            this.observers = [];
+            this.controller = null;
+            this.signal = null;
+        }
+    };
 
     /*
     parent: String || Element
@@ -50,19 +67,13 @@ class CustomObserver {
             }
             // const addedNode = mutationRecords[0].addedNodes[0];
         });
-        this.observers.push(observer);
         observer.observe(parent, {childList: true});
         
         if (timeout !== null && typeof timeout === "number") {
             setTimeout(() => { observer.disconnect() }, timeout);
         }
-    }
-
-    observeChildAsync(parent, child) {
-        return new Promise((resolve, reject) => {
-            this.signal.addEventListener("abort", () => { reject(new Error("Aborted due to timeout")) });
-            this.observeChild(parent, { [child]: resolve });
-        });
+        
+        return observer;
     }
 
     /*
@@ -74,17 +85,20 @@ class CustomObserver {
         in ms
     */
     async observeChain(elementChain, handler, timeout=null) {
+        const observerChain = new CustomObserver._CustomObserverChain();
+        
         if (timeout !== null && typeof timeout === "number") {
-            this.controller = new AbortController();
-            this.signal = this.controller.signal;
-            setTimeout(() => { this.clearObserversChain() }, timeout);
+            const controller = new AbortController();
+            observerChain.controller = controller;
+            observerChain.signal = controller.signal;
+            setTimeout(() => { observerChain.clearStates() }, timeout);
         }
 
         let parent = this.root.querySelector(elementChain[0]);
         for (let idx = 1; idx < elementChain.length; idx++) {
             let child = elementChain[idx];
             try {
-                child = await this.observeChildAsync(parent, child);
+                child = await this._observeChildAsync(parent, child, observerChain);
             } catch(e) {
                 console.log(e);
                 break;
@@ -95,7 +109,7 @@ class CustomObserver {
             }
         }
 
-        this.clearObserversChain();
+        observerChain.clearStates();
     }
 
     /*
@@ -134,15 +148,13 @@ class CustomObserver {
         }
     }
 
-    clearObserversChain() {
-        this.observers.forEach((observer) => { observer.disconnect() });
-        if (this.controller) { this.controller.abort() };
-        this.clearStates();
-    }
-
-    clearStates() {
-        this.observers = [];
-        this.controller = null;
-        this.signal = null;
+    _observeChildAsync(parent, child, observerChain) {
+        return new Promise((resolve, reject) => {
+            if (observerChain.signal) {
+                observerChain.signal.addEventListener("abort", () => { reject(new Error("Aborted due to timeout")) });
+            }
+            const childObserver = this.observeChild(parent, { [child]: resolve });
+            observerChain.observers.push(childObserver);
+        });
     }
 } 
