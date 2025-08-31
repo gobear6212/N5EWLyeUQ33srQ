@@ -46,49 +46,22 @@ class CustomObserver {
         Object that maps selector -> handler for the selected element
     */
     observeChild(parent, childrenNeeded, timeout=null) {
-        function _checkChild(node) {
-            if (!node || !(node instanceof Element)) {
-                return;
-            }
-            for (const [selector, handler] of Object.entries(childrenNeeded)) {
-                console.log(node, selector, node.matches(selector))
-                if (node.matches(selector)) {
-                    console.log("Found:" + selector)
-                    delete childrenNeeded[selector];
-                    handler(node);
-                }
-            }
-        }
-
-        parent = typeof parent === "string"? this.root.querySelector(parent) : parent;
-        if (!parent || !(parent instanceof Element)) {
-            console.log("Failed to retrieve the parent element for: ", childrenNeeded);
-        }
-        for (const child of parent.children) {
-            _checkChild(child);
-            if (Object.keys(childrenNeeded).length === 0) {
-                return;
-            }
-        }
-        const observer = new window.MutationObserver((mutationRecords) => {
-            for (let i = 0; i < mutationRecords.length; i++) {
-                for (let j = 0; j < mutationRecords[i].addedNodes.length; j++) {
-                    const addedNode = mutationRecords[i].addedNodes[j];
-                    _checkChild(addedNode);
-                    if (Object.keys(childrenNeeded).length === 0) {
-                        observer.disconnect();
-                        return;
-                    }
-                }
-            }
-            // const addedNode = mutationRecords[0].addedNodes[0];
-        });
-        observer.observe(parent, {childList: true});
-        
-        if (timeout !== null && typeof timeout === "number") {
+        const observer = this._observeChild(parent, childrenNeeded, false);
+        if (timeout !== null && typeof timeout === "number" && timeout > 0) {
             setTimeout(() => { observer.disconnect() }, timeout);
         }
         
+        return observer;
+    }
+
+    /*
+    parent: String || Element
+        selector or an element
+    childrenNeeded: { String : Function(Element) }
+        Object that maps selector -> handler for the selected element
+    */
+    observeChildContinuous(parent, childrenNeeded) {
+        const observer = this._observeChild(parent, childrenNeeded, true);
         return observer;
     }
 
@@ -101,9 +74,17 @@ class CustomObserver {
         in ms
     */
     async observeChain(elementChain, handler, timeout=null) {
+        function _observeChildAsync(parent, child, observerChain) {
+            return new Promise((resolve, reject) => {
+                observerChain.addTimeoutHandler(reject);
+                const childObserver = this.observeChild(parent, { [child]: resolve });
+                observerChain.addObserver(childObserver);
+            });
+        }
+
         const observerChain = new CustomObserver._CustomObserverChain();
         
-        if (timeout !== null && typeof timeout === "number") {
+        if (timeout !== null && typeof timeout === "number" && timeout > 0) {
             const controller = new AbortController();
             observerChain.addController(controller);
             setTimeout(() => { observerChain.clearStates() }, timeout);
@@ -113,7 +94,7 @@ class CustomObserver {
         for (let idx = 1; idx < elementChain.length; idx++) {
             let child = elementChain[idx];
             try {
-                child = await this._observeChildAsync(parent, child, observerChain);
+                child = await _observeChildAsync.call(this, parent, child, observerChain);
             } catch(e) {
                 console.log(e);
                 break;
@@ -138,8 +119,8 @@ class CustomObserver {
             for (const [selector, handler] of Object.entries(descendentsNeeded)) {
                 const target = ancestor.querySelector(selector);
                 if (target) {
-                    handler(target);
                     delete descendentsNeeded[selector];
+                    handler(target);
                 }
             }
         }
@@ -158,7 +139,7 @@ class CustomObserver {
         });
         observer.observe(ancestor, {"childList": true, "subtree": true});
         
-        if (timeout !== null && typeof timeout === "number") {
+        if (timeout !== null && typeof timeout === "number" && timeout > 0) {
             setTimeout(() => { observer.disconnect() }, timeout);
         }
     }
@@ -190,16 +171,57 @@ class CustomObserver {
         });
         observer.observe(ancestor, {"childList": true, "subtree": true});
         
-        if (timeout !== null && typeof timeout === "number") {
+        if (timeout !== null && typeof timeout === "number" && timeout > 0) {
             setTimeout(() => { observer.disconnect() }, timeout);
         }
     }
 
-    _observeChildAsync(parent, child, observerChain) {
-        return new Promise((resolve, reject) => {
-            observerChain.addTimeoutHandler(reject);
-            const childObserver = this.observeChild(parent, { [child]: resolve });
-            observerChain.addObserver(childObserver);
+    _observeChild(parent, childrenNeeded, continuous) {
+        function _checkChild(node) {
+            if (!node || !(node instanceof Element)) {
+                return;
+            }
+            for (const [selector, handler] of Object.entries(childrenNeeded)) {
+                console.log(node, selector, node.matches(selector))
+                if (node.matches(selector)) {
+                    console.log("Found:" + selector)
+                    if (!continuous) {
+                        delete childrenNeeded[selector];
+                    }
+                    handler(node);
+                }
+            }
+        }
+
+        parent = typeof parent === "string"? this.root.querySelector(parent) : parent;
+        if (!parent || !(parent instanceof Element)) {
+            console.log("Failed to retrieve the parent element for: ", childrenNeeded);
+        }
+
+        if (!continuous) {
+            for (const child of parent.children) {
+                _checkChild(child);
+                if (Object.keys(childrenNeeded).length === 0) {
+                    return;
+                }
+            }
+        }
+
+        const observer = new window.MutationObserver((mutationRecords) => {
+            for (let i = 0; i < mutationRecords.length; i++) {
+                for (let j = 0; j < mutationRecords[i].addedNodes.length; j++) {
+                    const addedNode = mutationRecords[i].addedNodes[j];
+                    _checkChild(addedNode);
+                    if (!continuous && Object.keys(childrenNeeded).length === 0) {
+                        observer.disconnect();
+                        return;                        
+                    }
+                }
+            }
+            // const addedNode = mutationRecords[0].addedNodes[0];
         });
+        observer.observe(parent, {childList: true});
+        
+        return observer;
     }
 } 
