@@ -1,9 +1,6 @@
 class CustomObserver {
     constructor(root=null) {
         this.root = root || document;
-        this.observers = [];
-        this.controller = null;
-        this.signal = null;
     }
     
     static _CustomObserverChain = class {
@@ -158,6 +155,38 @@ class CustomObserver {
                 observer.disconnect();
                 return;
             }
+        });
+        observer.observe(ancestor, {"childList": true, "subtree": true});
+        
+        if (timeout !== null && typeof timeout === "number") {
+            setTimeout(() => { observer.disconnect() }, timeout);
+        }
+    }
+
+    /* Run handler as soon as the ancestor has started populating
+    ancestor: Element
+        an element to observe
+    handler: Function()
+    */
+    observeAnyDescendent(ancestor, handler, timeout=null) {
+        function _checkAnyDescendent() {
+            const target = ancestor.querySelector(anySelector);
+            return target ? true : false;
+        }
+
+        const anySelector = "*";
+        if (_checkAnyDescendent()) {
+            handler();
+            return;
+        }
+
+        const observer = new window.MutationObserver(() => {
+            observer.disconnect();
+            handler();
+            // if (_checkAnyDescendent()) {
+            //     observer.disconnect();
+            //     handler();
+            // }
         });
         observer.observe(ancestor, {"childList": true, "subtree": true});
         
