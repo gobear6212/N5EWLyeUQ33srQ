@@ -9,24 +9,24 @@ var customPrefix = "";
 
 const currying = (fn, ...params) => ((...more) => fn(...params, ...more));
 
-const trustedTypesPolicy = typeof(trustedTypes) === "undefined" ? null :
-                            trustedTypes.createPolicy("escapeCustom", {
-                                createHTML: (toEscapeHTML) => toEscapeHTML,
-                                createScriptURL: (toEscapeScriptURL) => toEscapeScriptURL,   // warning: this is unsafe!
-                                createScript: (toEscapeScript) => toEscapeScript,   // warning: this is unsafe!
-                            });
+// const trustedTypesPolicy = typeof(trustedTypes) === "undefined" ? null :
+//                             trustedTypes.createPolicy("escapeCustom", {
+//                                 createHTML: (toEscapeHTML) => toEscapeHTML,
+//                                 createScriptURL: (toEscapeScriptURL) => toEscapeScriptURL,   // warning: this is unsafe!
+//                                 createScript: (toEscapeScript) => toEscapeScript,   // warning: this is unsafe!
+//                             });
 
-const innerHTMLWrapper = trustedTypesPolicy === null ? 
-                            (html) => html :
-                            (html) => trustedTypesPolicy.createHTML(html);
+// const innerHTMLWrapper = trustedTypesPolicy === null ? 
+//                             (html) => html :
+//                             (html) => trustedTypesPolicy.createHTML(html);
 
-const scriptURLWrapper = trustedTypesPolicy === null ? 
-                            (scriptURL) => scriptURL :
-                            (scriptURL) => trustedTypesPolicy.createScriptURL(scriptURL);
+// const scriptURLWrapper = trustedTypesPolicy === null ? 
+//                             (scriptURL) => scriptURL :
+//                             (scriptURL) => trustedTypesPolicy.createScriptURL(scriptURL);
 
-const scriptWrapper = trustedTypesPolicy === null ? 
-                            (script) => script :
-                            (script) => trustedTypesPolicy.createScript(script);
+// const scriptWrapper = trustedTypesPolicy === null ? 
+//                             (script) => script :
+//                             (script) => trustedTypesPolicy.createScript(script);
 
 // inclusive start and end
 // descending if start > end and step < 0
@@ -121,9 +121,11 @@ async function insertScript(args=null) {
         script.id = id;
         script.type = "text/javascript";
         if (mode === "text") {
-            script.text = scriptWrapper(content);
+            script.text = content;
+            // script.text = scriptWrapper(content);
         } else if (mode === "src") {
-            script.src = scriptURLWrapper(content);
+            script.src = content;
+            // script.src = scriptURLWrapper(content);
         }
         (doc.head || doc.body || doc.documentElement).appendChild(script);
     } else {
@@ -296,13 +298,26 @@ async function createMenu(handlerDict) {
     async function _createWrapper() {
         let wrapper = document.createElement("div");
         wrapper.id = `${customPrefix}-menu-wrapper`;
-        wrapper.innerHTML = innerHTMLWrapper(`
-        <div id="${customPrefix}-menu-box">
-            <div id="${customPrefix}-menu-list"></div>
-            <hr />
-            <input id="${customPrefix}-menu-input" type="text"></input>
-        </div>
-        `);
+
+        const menuBox = document.createElement('div');
+        menuBox.id = `${customPrefix}-menu-box`;
+        wrapper.appendChild(menuBox);
+
+        // Create menu list container
+        const menuList = document.createElement('div');
+        menuList.id = `${customPrefix}-menu-list`;
+        menuBox.appendChild(menuList);
+
+        // Create horizontal rule
+        const hr = document.createElement('hr');
+        menuBox.appendChild(hr);
+
+        // Create input field
+        const input = document.createElement('input');
+        input.id = `${customPrefix}-menu-input`;
+        input.type = 'text';
+        menuBox.appendChild(input);
+
         document.body.appendChild(wrapper);
         
         const _ = await insertStylesheet({
@@ -544,3 +559,100 @@ function fflateZipAsync(zipObject, config) {
         });
     });
 }
+
+class CustomMessageCreator {
+    constructor() {
+        let isMobile = window.matchMedia("(pointer:coarse)").matches;
+
+        this.customStyleString = `
+            div#${customPrefix}-message-wrapper * {
+                all: revert !important;
+            }
+            
+            div#${customPrefix}-message-box {
+                position: fixed !important;
+                top: 2em !important;
+                right: 3em !important;
+                z-index: 2147483647 !important;
+                max-width: ${isMobile? "50%" : "15%"} !important;
+                width: ${isMobile? "50%" : "15%"} !important;
+                font-weight: 300 !important;
+                font-family: Helvetica, Arial, sans-serif !important;
+            }
+            
+            div#${customPrefix}-message-box > div {
+                box-shadow: 0 .125em .25em rgba(0,0,0,.075) !important;
+                border: 1px solid rgba(0,0,0,.125) !important;
+                padding: 0.15em !important;
+                border-radius: 0.25em;
+                background-color: rgba(250, 250, 250, 0.9) !important;
+                text-align: center !important;
+                color: #2d2d2d !important;
+                margin: 10px 0 !important;
+                width: 100% !important;
+            }
+        `;
+
+        this.idx = 0;
+        this.messages = {};
+    }
+    
+    async createMessage(message, id=null, timeout=null) {
+        if (!message) { return; }
+
+        id = id || this._generateMessageId();
+        timeout = timeout || Math.max(1500, message.split(" ").length * 400);
+        const [wrapper, box] = await this._createWrapper();
+
+        let [messageElem, timer] = id in this.messages ? this.messages[id] : [null, null];
+        if (messageElem && document.contains(messageElem)) {
+            clearTimeout(timer);
+            delete this.messages[id];
+            messageElem.innerText = message;        
+        } else {
+            messageElem = document.createElement("div");
+            messageElem.innerText = message;
+            box.appendChild(messageElem);
+        }
+
+        timer = setTimeout(() => {
+            messageElem.remove();
+            delete this.messages[id];
+        }, timeout);
+
+        this.messages[id] = [messageElem, timer];
+        return id;
+    }
+
+    _generateMessageId() {
+        this.idx += 1;
+        return `${(new Date()).getTime()} ${this.idx}`;
+    }
+
+    async _createWrapper() {
+        let wrapper = document.getElementById(`${customPrefix}-message-wrapper`);
+        let box = document.getElementById(`${customPrefix}-message-box`);
+
+        if (wrapper && box) {
+            return [wrapper, box];
+        } else {
+            wrapper = document.createElement("div");
+            wrapper.id = `${customPrefix}-message-wrapper`;
+
+            box = document.createElement("div");
+            box.id = `${customPrefix}-message-box`;
+            wrapper.appendChild(box);
+
+            await documentReadyAsync();
+            const _ = await insertStylesheet({
+                "mode": "text",
+                "content": this.customStyleString,
+                "unique": true,
+                "id": `${customPrefix}-createMessage-style`
+            });
+
+            document.body.appendChild(wrapper);
+            return [wrapper, box];
+        }
+    }
+} 
